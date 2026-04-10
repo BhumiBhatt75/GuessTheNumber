@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: guess-me-if-you-can
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --worker-class threading -w 1 app:app
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: "3.11.0"

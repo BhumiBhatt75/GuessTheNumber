@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Guess The Number</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0f0f13;
+      color: #e8e8f0;
+      font-family: 'Courier New', monospace;
+    }
+
+    .game {
+      width: 420px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.4rem;
+      letter-spacing: 0.2em;
+      color: #a0a0c0;
+      text-transform: uppercase;
+    }
+
+    .rules {
+      background: #1a1a24;
+      border: 1px solid #2a2a3a;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 0.75rem;
+      color: #6060a0;
+      line-height: 1.6;
+    }
+
+    .rules span { color: #8080c0; }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      background: #1a1a24;
+      border: 1px solid #3a3a5a;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 1.5rem;
+      letter-spacing: 0.3em;
+      color: #e8e8f0;
+      font-family: inherit;
+      outline: none;
+      text-align: center;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus { border-color: #6060c0; }
+    input[type="text"].error  { border-color: #c04040; }
+
+    button {
+      background: #3a3a6a;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 20px;
+      color: #c0c0f0;
+      font-family: inherit;
+      font-size: 0.85rem;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover:not(:disabled) { background: #5050a0; }
+    button:disabled { opacity: 0.4; cursor: default; }
+
+    .error-msg {
+      font-size: 0.78rem;
+      color: #c06060;
+      min-height: 1em;
+      text-align: center;
+    }
+
+    .history {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .history::-webkit-scrollbar { width: 4px; }
+    .history::-webkit-scrollbar-track { background: transparent; }
+    .history::-webkit-scrollbar-thumb { background: #3a3a5a; border-radius: 2px; }
+
+    .entry {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #1a1a24;
+      border: 1px solid #2a2a3a;
+      border-radius: 6px;
+      padding: 10px 14px;
+      animation: slide-in 0.15s ease;
+    }
+
+    @keyframes slide-in {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .entry .guess-num {
+      font-size: 1.3rem;
+      letter-spacing: 0.25em;
+      color: #c0c0f0;
+    }
+
+    .entry .badges {
+      display: flex;
+      gap: 8px;
+    }
+
+    .badge {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #24243a;
+      border-radius: 6px;
+      padding: 4px 10px;
+      min-width: 44px;
+    }
+
+    .badge .val {
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #8080e0;
+    }
+
+    .badge .lbl {
+      font-size: 0.6rem;
+      color: #5050a0;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .entry.win {
+      border-color: #40a060;
+      background: #0f2018;
+    }
+
+    .entry.win .guess-num { color: #60e090; }
+    .entry.win .badge .val { color: #60e090; }
+
+    .win-banner {
+      text-align: center;
+      padding: 16px;
+      background: #0f2018;
+      border: 1px solid #40a060;
+      border-radius: 8px;
+      color: #60e090;
+      font-size: 1rem;
+      letter-spacing: 0.15em;
+      animation: slide-in 0.2s ease;
+    }
+
+    .win-banner .attempts {
+      font-size: 0.8rem;
+      color: #40a060;
+      margin-top: 4px;
+    }
+
+    .attempt-count {
+      text-align: center;
+      font-size: 0.75rem;
+      color: #404060;
+    }
+  </style>
+</head>
+<body>
+<div class="game">
+  <h1>Guess The Number</h1>
+
+  <div class="rules">
+    <span>Rules:</span> 4-digit number · no leading zero · no repeated digits · no consecutive adjacent digits<br>
+    <span>Feedback:</span> <span>X</span> = digit exists somewhere · <span>Y</span> = correct position
+  </div>
+
+  <div id="win-banner" style="display:none"></div>
+
+  <div class="input-row">
+    <input id="guess-input" type="text" maxlength="4" placeholder="_ _ _ _" autocomplete="off" />
+    <button id="guess-btn">GUESS</button>
+    <button id="new-btn">NEW</button>
+  </div>
+
+  <div class="error-msg" id="error-msg"></div>
+  <div class="attempt-count" id="attempt-count"></div>
+  <div class="history" id="history"></div>
+</div>
+
+<script>
+  // ── Validation ──────────────────────────────────────────────────────────────
+  function isValid(s) {
+    if (s.length !== 4)           return [false, "Must be exactly 4 digits"];
+    if (s[0] === '0')             return [false, "Cannot start with 0"];
+    if (!/^\d+$/.test(s))        return [false, "Digits only"];
+    const d = s.split('').map(Number);
+    if (new Set(d).size !== 4)   return [false, "No repeated digits"];
+    for (let i = 0; i < 3; i++)
+      if (Math.abs(d[i] - d[i+1]) === 1) return [false, "No consecutive adjacent digits"];
+    return [true, ""];
+  }
+
+  // ── Generation ───────────────────────────────────────────────────────────────
+  function generate() {
+    while (true) {
+      const pool = [1,2,3,4,5,6,7,8,9];
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+      const digits = pool.slice(0, 4);
+      let ok = true;
+      for (let i = 0; i < 3; i++)
+        if (Math.abs(digits[i] - digits[i+1]) === 1) { ok = false; break; }
+      if (ok) return digits.join('');
+    }
+  }
+
+  // ── Check guess ──────────────────────────────────────────────────────────────
+  function checkGuess(secret, guess) {
+    let correct = 0, exist = 0;
+    for (let i = 0; i < 4; i++)
+      if (guess[i] === secret[i]) correct++;
+    for (const ch of guess)
+      if (secret.includes(ch)) exist++;
+    return { exist, correct };
+  }
+
+  // ── State ────────────────────────────────────────────────────────────────────
+  let secret, attempts, won;
+
+  function newGame() {
+    secret   = generate();
+    attempts = 0;
+    won      = false;
+    document.getElementById('history').innerHTML      = '';
+    document.getElementById('win-banner').style.display = 'none';
+    document.getElementById('error-msg').textContent  = '';
+    document.getElementById('attempt-count').textContent = '';
+    document.getElementById('guess-input').value      = '';
+    document.getElementById('guess-input').disabled   = false;
+    document.getElementById('guess-btn').disabled     = false;
+    document.getElementById('guess-input').focus();
+    // console.log('secret:', secret); // uncomment to cheat during testing
+  }
+
+  function submitGuess() {
+    if (won) return;
+
+    const input = document.getElementById('guess-input');
+    const errEl = document.getElementById('error-msg');
+    const val   = input.value.trim();
+
+    const [valid, msg] = isValid(val);
+    if (!valid) {
+      errEl.textContent = msg;
+      input.classList.add('error');
+      input.select();
+      return;
+    }
+
+    errEl.textContent = '';
+    input.classList.remove('error');
+    attempts++;
+
+    const { exist, correct } = checkGuess(secret, val);
+    const isWin = correct === 4;
+
+    // build history entry
+    const entry = document.createElement('div');
+    entry.className = 'entry' + (isWin ? ' win' : '');
+    entry.innerHTML = `
+      <span class="guess-num">${val}</span>
+      <div class="badges">
+        <div class="badge"><span class="val">${exist}</span><span class="lbl">exist</span></div>
+        <div class="badge"><span class="val">${correct}</span><span class="lbl">pos</span></div>
+      </div>`;
+
+    const history = document.getElementById('history');
+    history.prepend(entry);
+
+    document.getElementById('attempt-count').textContent =
+      `attempt ${attempts}`;
+
+    input.value = '';
+    input.focus();
+
+    if (isWin) {
+      won = true;
+      input.disabled  = true;
+      document.getElementById('guess-btn').disabled = true;
+      const banner = document.getElementById('win-banner');
+      banner.innerHTML = `
+        YOU GOT IT<br>
+        <span class="attempts">solved in ${attempts} attempt${attempts !== 1 ? 's' : ''}</span>`;
+      banner.style.display = 'block';
+    }
+  }
+
+  // ── Events ───────────────────────────────────────────────────────────────────
+  document.getElementById('guess-btn').addEventListener('click', submitGuess);
+  document.getElementById('new-btn').addEventListener('click', newGame);
+  document.getElementById('guess-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') submitGuess();
+  });
+  document.getElementById('guess-input').addEventListener('input', () => {
+    document.getElementById('guess-input').classList.remove('error');
+    document.getElementById('error-msg').textContent = '';
+  });
+
+  // ── Start ────────────────────────────────────────────────────────────────────
+  newGame();
+</script>
+</body>
+</html>

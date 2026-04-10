@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Guess Me If You Can</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --correct : #538d4e;
+      --exists  : #b59f3b;
+      --none    : #787c7e;
+      --tile    : 50px;
+      --gap     : 5px;
+    }
+
+    body {
+      min-height: 100dvh;
+      background: #f9f9f9;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      color: #1a1a1b;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── TOAST ─────────────────────────────────────────────────────────────── */
+    #toast {
+      position: fixed; top: 64px; left: 50%;
+      transform: translateX(-50%);
+      background: #1a1a1b; color: #fff;
+      padding: 8px 18px; border-radius: 8px;
+      font-size: 0.8rem; font-weight: 600;
+      z-index: 200; pointer-events: none;
+      opacity: 0; transition: opacity .15s;
+      white-space: nowrap; max-width: 90vw;
+      text-align: center;
+    }
+    #toast.show { opacity: 1; }
+
+    /* ── SHARED HEADER ─────────────────────────────────────────────────────── */
+    .s-header {
+      width: 100%; background: #fff;
+      border-bottom: 1px solid #e8e8e8;
+      padding: 10px 16px 7px;
+      text-align: center; flex-shrink: 0;
+    }
+    .logo-main {
+      font-family: 'Bungee', cursive;
+      font-size: clamp(1.4rem, 5.5vw, 2rem);
+      line-height: 1;
+      background: linear-gradient(120deg, #ff4500, #ff8c00, #ffc700);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .logo-sub {
+      font-family: 'Bungee', cursive;
+      font-size: clamp(0.58rem, 2.2vw, 0.82rem);
+      color: transparent; -webkit-text-stroke: 1.3px #ff8c00;
+      letter-spacing: 0.13em; opacity: .75;
+    }
+
+    /* ── SCREEN SYSTEM ─────────────────────────────────────────────────────── */
+    .screen { display: none; flex-direction: column; align-items: center; width: 100%; flex: 1; }
+    .screen.active { display: flex; }
+
+    /* ── HOME SCREEN ───────────────────────────────────────────────────────── */
+    #s-home .body {
+      flex: 1; width: 100%; max-width: 360px;
+      padding: 28px 20px 24px;
+      display: flex; flex-direction: column; gap: 20px;
+    }
+
+    .card {
+      background: #fff; border: 1px solid #e8e8e8;
+      border-radius: 16px; padding: 20px 18px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+
+    .card label {
+      font-size: 0.72rem; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase; color: #888;
+    }
+
+    .field {
+      width: 100%; background: #f5f5f5; border: 1.5px solid #e0e0e0;
+      border-radius: 10px; padding: 12px 14px;
+      font-family: 'Inter', sans-serif; font-size: 0.95rem;
+      color: #1a1a1b; outline: none;
+      transition: border-color .2s;
+    }
+    .field:focus { border-color: #ff8c00; background: #fff; }
+    .field.err   { border-color: #ef4444; }
+    .field::placeholder { color: #bbb; }
+
+    .btn {
+      width: 100%; border: none; border-radius: 10px;
+      padding: 13px; cursor: pointer;
+      font-family: 'Bungee', cursive; font-size: 0.95rem;
+      letter-spacing: 0.07em; transition: opacity .15s, transform .1s;
+    }
+    .btn:active { transform: scale(.98); }
+    .btn:disabled { opacity: .35; cursor: default; }
+    .btn-dark  { background: #1a1a1b; color: #fff; }
+    .btn-dark:hover:not(:disabled)  { background: #333; }
+    .btn-light { background: #f0f0f0; color: #1a1a1b; }
+    .btn-light:hover:not(:disabled) { background: #e0e0e0; }
+
+    .divider {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 0.72rem; color: #bbb;
+    }
+    .divider::before, .divider::after {
+      content: ''; flex: 1; height: 1px; background: #e8e8e8;
+    }
+
+    .join-row { display: flex; gap: 8px; }
+    .join-row .field {
+      flex: 1; text-align: center; font-weight: 700;
+      font-size: 1.1rem; letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+    .join-row .btn { width: auto; padding: 12px 18px; flex-shrink: 0; }
+
+    /* ── LOBBY SCREEN ──────────────────────────────────────────────────────── */
+    #s-lobby .body {
+      flex: 1; width: 100%; max-width: 360px;
+      padding: 32px 20px 24px;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 16px;
+    }
+
+    .lobby-title {
+      font-family: 'Bungee', cursive;
+      font-size: 1.1rem; letter-spacing: 0.08em; color: #555;
+    }
+
+    .code-box {
+      background: #fff; border: 2px solid #e8e8e8;
+      border-radius: 14px; padding: 18px 24px;
+      display: flex; align-items: center; gap: 16px;
+    }
+    .room-code {
+      font-family: 'Bungee', cursive;
+      font-size: 2.4rem; letter-spacing: 0.22em;
+      background: linear-gradient(120deg, #ff4500, #ff8c00, #ffc700);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .btn-copy {
+      background: #f0f0f0; border: none; border-radius: 8px;
+      padding: 8px 12px; font-size: 0.72rem; font-weight: 600;
+      color: #555; cursor: pointer; transition: background .15s;
+      white-space: nowrap;
+    }
+    .btn-copy:hover { background: #e0e0e0; }
+    .btn-copy.copied { background: #d1fae5; color: #059669; }
+
+    .lobby-hint { font-size: 0.78rem; color: #888; text-align: center; }
+
+    .spinner {
+      width: 28px; height: 28px; margin-top: 8px;
+      border: 3px solid #e8e8e8; border-top-color: #ff8c00;
+      border-radius: 50%; animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .lobby-waiting { font-size: 0.82rem; color: #888; }
+
+    .btn-link {
+      background: none; border: none; font-family: 'Inter', sans-serif;
+      font-size: 0.75rem; color: #bbb; cursor: pointer;
+      text-decoration: underline; text-underline-offset: 3px;
+      padding: 0; margin-top: 8px;
+    }
+    .btn-link:hover { color: #888; }
+
+    /* ── NUMBER SELECTION SCREEN ──────────────────────────────────────────────── */
+    #s-number .body {
+      flex: 1; width: 100%; max-width: 360px;
+      padding: 28px 20px 24px;
+      display: flex; flex-direction: column; gap: 20px;
+    }
+
+    .number-label {
+      font-family: 'Bungee', cursive; font-size: 1.1rem;
+      color: #1a1a1b; text-align: center; margin-bottom: 8px;
+    }
+
+    .number-hint {
+      font-size: 0.75rem; color: #888; text-align: center;
+      margin-bottom: 20px; line-height: 1.4;
+    }
+
+    .number-input-wrapper {
+      display: flex; justify-content: center; gap: 12px;
+      margin-bottom: 24px; position: relative;
+    }
+
+    .number-digit {
+      width: 50px; height: 60px; 
+      background: linear-gradient(145deg, #ffffff, #f8f9fa);
+      border: 2px solid #d3d6da; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Bungee', cursive; font-size: 1.8rem;
+      color: #1a1a1b; font-weight: 700;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08), inset 0 1px 2px rgba(255,255,255,0.8);
+      position: relative;
+    }
+
+    .number-digit.filled {
+      background: linear-gradient(145deg, #fff9f0, #ffedd0);
+      border-color: #ff8c00; color: #d97706;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(255,140,0,0.15), inset 0 1px 2px rgba(255,255,255,0.9);
+    }
+
+    .number-digit.filled::after {
+      content: ''; position: absolute; top: -2px; left: -2px; right: -2px; bottom: -2px;
+      background: linear-gradient(45deg, #ff8c00, #ffa500, #ff8c00);
+      border-radius: 12px; z-index: -1;
+      opacity: 0; animation: digitGlow 2s ease-in-out infinite;
+    }
+
+    @keyframes digitGlow {
+      0%, 100% { opacity: 0; }
+      50% { opacity: 0.3; }
+    }
+
+    .number-digit.error {
+      background: linear-gradient(145deg, #fef2f2, #fee2e2);
+      border-color: #ef4444; color: #dc2626;
+      animation: digitShake 0.4s ease;
+    }
+
+    @keyframes digitShake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-4px); }
+      75% { transform: translateX(4px); }
+    }
+
+    .number-input-hidden {
+      position: absolute; opacity: 0; pointer-events: none;
+      width: 0; height: 0; border: none; padding: 0;
+    }
+
+    .btn-confirm {
+      width: 100%; padding: 14px 20px; font-size: 0.95rem;
+      background: linear-gradient(145deg, #ff8c00, #ff6b00);
+      border: none; border-radius: 12px;
+      transition: all 0.2s ease; position: relative;
+      overflow: hidden;
+    }
+
+    .btn-confirm:hover:not(:disabled) {
+      background: linear-gradient(145deg, #ff6b00, #ff5500);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(255,140,0,0.25);
+    }
+
+    .btn-confirm:active:not(:disabled) {
+      transform: translateY(0); box-shadow: 0 2px 6px rgba(255,140,0,0.2);
+    }
+
+    .btn-confirm::before {
+      content: ''; position: absolute; top: 0; left: -100%;
+      width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transition: left 0.5s ease;
+    }
+
+    .btn-confirm:hover:not(:disabled)::before {
+      left: 100%;
+    }
+
+    /* ── GAME SCREEN ───────────────────────────────────────────────────────── */
+    #s-game {
+      background: #f9f9f9;
+    }
+
+    /* Player panels */
+    .players-bar {
+      width: 100%; background: #fff;
+      border-bottom: 1px solid #e8e8e8;
+      padding: 10px 16px;
+      display: flex; align-items: center; gap: 10px;
+    }
+
+    .player-card {
+      flex: 1; display: flex; flex-direction: column; gap: 4px;
+    }
+    .player-card.me { align-items: flex-start; }
+    .player-card.opp { align-items: flex-end; }
+
+    .pc-name {
+      font-size: 0.78rem; font-weight: 700;
+      white-space: nowrap; overflow: hidden;
+      text-overflow: ellipsis; max-width: 110px;
+    }
+    .pc-attempts {
+      font-size: 0.65rem; color: #888;
+    }
+    .pc-bar-bg {
+      width: 100%; height: 5px; background: #e8e8e8; border-radius: 99px;
+      overflow: hidden;
+    }
+    .pc-bar-fill {
+      height: 100%; width: 0%; border-radius: 99px;
+      background: #ff8c00; transition: width .4s ease;
+    }
+    .pc-pct {
+      font-size: 0.65rem; font-weight: 600; color: #ff8c00;
+    }
+    .player-card.opp .pc-bar-bg { direction: rtl; }
+
+    .vs-badge {
+      font-family: 'Bungee', cursive; font-size: 0.8rem;
+      color: #ccc; flex-shrink: 0;
+    }
+
+    .pc-secret {
+      font-family: 'Bungee', cursive; font-size: 0.9rem;
+      letter-spacing: 0.15em; color: #1a1a1b;
+      margin: 2px 0;
+    }
+
+    .pc-last-guess {
+      font-family: 'Bungee', cursive; font-size: 0.8rem;
+      letter-spacing: 0.12em; color: #666;
+      margin: 2px 0;
+    }
+
+    /* Turn indicator */
+    .turn-bar {
+      width: 100%; padding: 6px 16px;
+      font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em;
+      text-align: center; text-transform: uppercase;
+      transition: background .3s, color .3s;
+    }
+    .turn-bar.my-turn  { background: #fff9f0; color: #d97706; }
+    .turn-bar.opp-turn { background: #f5f5f5; color: #999; }
+
+    /* thinking dots */
+    .thinking {
+      display: inline-flex; gap: 3px; align-items: center; margin-left: 6px;
+    }
+    .thinking span {
+      width: 4px; height: 4px; background: currentColor;
+      border-radius: 50%; animation: blink 1.2s infinite;
+    }
+    .thinking span:nth-child(2) { animation-delay: .2s; }
+    .thinking span:nth-child(3) { animation-delay: .4s; }
+    @keyframes blink {
+      0%,80%,100% { opacity: .2; }
+      40%          { opacity: 1;  }
+    }
+
+    /* Grid */
+    .game-body {
+      flex: 1; width: 100%; max-width: 360px;
+      padding: 12px 16px 14px;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 12px;
+    }
+
+    .grid { display: flex; flex-direction: column; gap: var(--gap); }
+    .row  {
+      display: grid;
+      grid-template-columns: repeat(4, var(--tile));
+      gap: var(--gap);
+    }
+    .tile {
+      width: var(--tile); height: var(--tile);
+      border: 2px solid #d3d6da; border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.45rem; font-weight: 700; color: #1a1a1b;
+      background: #fff; user-select: none; will-change: transform;
+    }
+    .tile.has-char { border-color: #888; }
+    .tile.pop { animation: tile-pop .08s ease; }
+    @keyframes tile-pop {
+      0%   { transform: scale(1); }
+      50%  { transform: scale(1.14); }
+      100% { transform: scale(1); }
+    }
+    .tile.flip { animation: tile-flip .44s ease forwards; }
+    @keyframes tile-flip {
+      0%   { transform: scaleY(1); }
+      45%  { transform: scaleY(0.01); }
+      55%  { transform: scaleY(0.01); }
+      100% { transform: scaleY(1); }
+    }
+    .tile[data-s="correct"] { background: var(--correct); border-color: var(--correct); color: #fff; }
+    .tile[data-s="exists"]  { background: var(--exists);  border-color: var(--exists);  color: #fff; }
+    .tile[data-s="none"]    { background: var(--none);    border-color: var(--none);    color: #fff; }
+
+    /* Game Input */
+    .guess-input-container {
+      width: 100%; display: flex; flex-direction: column; gap: 12px;
+    }
+    #guess-input {
+      width: 100%; background: #fff;
+      border: 2px solid #d3d6da; border-radius: 14px;
+      padding: 16px 18px;
+      font-family: 'Bungee', cursive; font-size: 1.6rem;
+      font-weight: 700; letter-spacing: 0.3em;
+      text-align: center; color: #1a1a1b; outline: none;
+      transition: all .3s ease; -webkit-appearance: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    #guess-input::placeholder { 
+      font-family: 'Inter', sans-serif;
+      font-size: 0.95rem; 
+      font-weight: 500; 
+      letter-spacing: 0.05em; 
+      color: #999;
+      text-transform: none;
+    }
+    #guess-input:focus:not(:disabled) { 
+      border-color: #ff8c00; 
+      box-shadow: 0 0 0 3px rgba(255,140,0,0.1), 0 4px 12px rgba(0,0,0,0.12);
+      transform: translateY(-1px);
+    }
+    #guess-input.shake { 
+      animation: shake .4s ease; 
+      border-color: #ef4444; 
+      background: #fef2f2;
+    }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      25%     { transform: translateX(-8px); }
+      75%     { transform: translateX(8px); }
+    }
+    #guess-input:disabled { 
+      background: #f8f9fa; 
+      color: #bbb; 
+      cursor: not-allowed; 
+      opacity: 0.6;
+    }
+
+    #guess-btn {
+      width: 100%; background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 50%, #ff5500 100%);
+      border: 2px solid rgba(255,255,255,0.3); border-radius: 16px;
+      padding: 18px 24px; font-family: 'Bungee', cursive;
+      font-size: 1.1rem; letter-spacing: 0.12em;
+      color: #fff; cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative;
+      overflow: hidden; font-weight: 800;
+      box-shadow: 
+        0 4px 15px rgba(255,140,0,0.3),
+        0 2px 8px rgba(255,140,0,0.2),
+        inset 0 1px 0 rgba(255,255,255,0.3);
+      text-transform: uppercase;
+    }
+    #guess-btn:hover:not(:disabled) { 
+      background: linear-gradient(135deg, #ff6b00 0%, #ff5500 50%, #ff4500 100%);
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 
+        0 8px 25px rgba(255,140,0,0.4),
+        0 4px 12px rgba(255,140,0,0.3),
+        inset 0 1px 0 rgba(255,255,255,0.4);
+      border-color: rgba(255,255,255,0.5);
+    }
+    #guess-btn:active:not(:disabled){ 
+      transform: translateY(-1px) scale(0.98); 
+      box-shadow: 
+        0 4px 15px rgba(255,140,0,0.3),
+        0 2px 8px rgba(255,140,0,0.2),
+        inset 0 1px 0 rgba(255,255,255,0.2);
+    }
+    #guess-btn::before {
+      content: ''; position: absolute; top: 0; left: -100%;
+      width: 100%; height: 100%;
+      background: linear-gradient(90deg, 
+        transparent, 
+        rgba(255,255,255,0.4) 20%, 
+        rgba(255,255,255,0.6) 50%, 
+        rgba(255,255,255,0.4) 80%, 
+        transparent);
+      transition: left 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    #guess-btn:hover:not(:disabled)::before {
+      left: 100%;
+    }
+    #guess-btn::after {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(135deg, 
+        rgba(255,255,255,0.2) 0%, 
+        transparent 50%, 
+        rgba(0,0,0,0.1) 100%);
+      border-radius: 14px; pointer-events: none;
+    }
+    #guess-btn:disabled { 
+      opacity: 0.5; 
+      cursor: not-allowed; 
+      background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 50%, #6b7280 100%);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      border-color: rgba(255,255,255,0.1);
+      transform: none;
+    }
+    #guess-btn:disabled::before,
+    #guess-btn:disabled::after {
+      display: none;
+    }
+
+    /* Legend */
+    .legend {
+      display: flex; gap: 12px; align-items: center;
+      font-size: 0.65rem; color: #888;
+    }
+    .legend-item { display: flex; align-items: center; gap: 4px; }
+    .legend-dot  { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+
+    /* ── END SCREEN ────────────────────────────────────────────────────────── */
+    #s-end .body {
+      flex: 1; width: 100%; max-width: 360px;
+      padding: 32px 20px 28px;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 18px;
+    }
+
+    .end-banner {
+      width: 100%; border-radius: 14px; padding: 18px 16px;
+      text-align: center; animation: pop-in .35s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes pop-in {
+      from { transform: scale(.88); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+    .end-banner.win  { background: #f0fdf4; border: 2px solid #86efac; }
+    .end-banner.lose { background: #fef2f2; border: 2px solid #fca5a5; }
+    .end-banner.draw { background: #fafafa; border: 2px solid #d4d4d4; }
+
+    .end-title {
+      font-family: 'Bungee', cursive;
+      font-size: 1.8rem; letter-spacing: 0.08em;
+    }
+    .end-banner.win  .end-title { color: #16a34a; }
+    .end-banner.lose .end-title { color: #dc2626; }
+    .end-banner.draw .end-title { color: #666; }
+    .end-sub { margin-top: 4px; font-size: 0.78rem; color: #666; }
+
+    .secrets-card {
+      width: 100%; background: #fff;
+      border: 1px solid #e8e8e8; border-radius: 14px;
+      padding: 16px 18px; display: flex;
+      flex-direction: column; gap: 10px;
+    }
+    .secret-row {
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .secret-lbl { font-size: 0.72rem; color: #888; }
+    .secret-val {
+      font-family: 'Bungee', cursive; font-size: 1.3rem;
+      letter-spacing: 0.18em; color: #1a1a1b;
+    }
+    .secret-divider { height: 1px; background: #f0f0f0; }
+
+    /* ── CONFETTI ──────────────────────────────────── */
+    .cp {
+      position: fixed; top: -10px; border-radius: 2px;
+      pointer-events: none; z-index: 999;
+      animation: cf linear forwards;
+    }
+    @keyframes cf { to { transform: translateY(110vh) rotate(540deg); opacity: 0; } }
+
+    /* ── RESPONSIVE ─────────────────────────────────────────────────────────── */
+    @media (min-width: 400px) {
+      :root { --tile: 56px; }
+    }
+    @media (min-width: 480px) {
+      :root { --tile: 62px; }
+      .game-body, #s-home .body, #s-lobby .body, #s-end .body { max-width: 400px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<!-- ══════════════════════════════════════════════════════════ HOME ══════ -->
+<section class="screen active" id="s-home">
+  <header class="s-header">
+    <div class="logo-main">GUESS ME</div>
+    <div class="logo-sub">IF YOU CAN</div>
+  </header>
+  <div class="body">
+    <div class="card">
+      <label>Your nickname</label>
+      <input id="home-nick" class="field" maxlength="16" placeholder="e.g. Rohan" autocomplete="off" />
+      <button id="btn-create" class="btn btn-dark">CREATE ROOM</button>
+      <div class="divider">or join a room</div>
+      <div class="join-row">
+        <input id="home-code" class="field" maxlength="4" placeholder="CODE" autocomplete="off" />
+        <button id="btn-join" class="btn btn-light">JOIN</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- NUMBER SELECTION SCREEN -->
+<section class="screen" id="s-number">
+  <header class="s-header">
+    <div class="logo-main">GUESS ME</div>
+    <div class="logo-sub">IF YOU CAN</div>
+  </header>
+  <div class="body">
+    <div class="card">
+      <label class="number-label">Choose your secret number</label>
+      <p class="number-hint">
+        4 digits, no leading zero, no repeated digits, no ascending consecutive (like 7-8)
+      </p>
+      <div class="number-input-wrapper">
+        <div class="number-digit" id="digit-0">_</div>
+        <div class="number-digit" id="digit-1">_</div>
+        <div class="number-digit" id="digit-2">_</div>
+        <div class="number-digit" id="digit-3">_</div>
+        <input id="number-input" class="number-input-hidden" maxlength="4" placeholder="1234" autocomplete="off" />
+      </div>
+      <button id="btn-confirm-number" class="btn btn-dark btn-confirm">CONFIRM NUMBER</button>
+    </div>
+  </div>
+</section>
+
+<!-- </section>
+
+<!-- ══════════════════════════════════════════════════════════ LOBBY ══════ -->
+<section class="screen" id="s-lobby">
+  <header class="s-header">
+    <div class="logo-main">GUESS ME</div>
+    <div class="logo-sub">IF YOU CAN</div>
+  </header>
+  <div class="body">
+    <div class="lobby-title">ROOM CREATED</div>
+    <div class="code-box">
+      <div class="room-code" id="lobby-code">----</div>
+      <button class="btn-copy" id="btn-copy">COPY</button>
+    </div>
+    <div class="lobby-hint">Share this code with a friend</div>
+    <div class="spinner"></div>
+    <div class="lobby-waiting">Waiting for opponent…</div>
+    <button class="btn-link" id="btn-cancel">cancel</button>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════ GAME ══════ -->
+<section class="screen" id="s-game">
+  <!-- Player panels -->
+  <div class="players-bar">
+    <div class="player-card me" id="pc-me">
+      <div class="pc-name" id="me-name">YOU</div>
+      <div class="pc-secret" id="me-secret">????</div>
+      <div class="pc-bar-bg"><div class="pc-bar-fill" id="me-bar"></div></div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pc-pct" id="me-pct">0%</span>
+        <span class="pc-attempts" id="me-att">0/8</span>
+      </div>
+    </div>
+    <div class="vs-badge">VS</div>
+    <div class="player-card opp" id="pc-opp">
+      <div class="pc-name" id="opp-name">Opponent</div>
+      <div class="pc-last-guess" id="opp-last-guess">--</div>
+      <div class="pc-bar-bg"><div class="pc-bar-fill" id="opp-bar"></div></div>
+      <div style="display:flex;gap:6px;align-items:center;flex-direction:row-reverse">
+        <span class="pc-pct" id="opp-pct">0%</span>
+        <span class="pc-attempts" id="opp-att">0/8</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Turn indicator -->
+  <div class="turn-bar my-turn" id="turn-bar">
+    YOUR TURN
+  </div>
+
+  <!-- Game body -->
+  <div class="game-body">
+    <div class="grid" id="grid"></div>
+
+    <div class="guess-input-container">
+      <input id="guess-input" type="tel" inputmode="numeric"
+             maxlength="4" placeholder="Enter 4-digit number..." autocomplete="off" />
+      <button id="guess-btn">GUESS</button>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════ END ════════ -->
+<section class="screen" id="s-end">
+  <header class="s-header">
+    <div class="logo-main">GUESS ME</div>
+    <div class="logo-sub">IF YOU CAN</div>
+  </header>
+  <div class="body">
+    <div class="end-banner win" id="end-banner">
+      <div class="end-title" id="end-title">YOU WIN!</div>
+      <div class="end-sub"   id="end-sub"></div>
+    </div>
+    <div class="secrets-card">
+      <div class="secret-row">
+        <span class="secret-lbl">Your number was</span>
+        <span class="secret-val" id="end-my-secret">????</span>
+      </div>
+      <div class="secret-divider"></div>
+      <div class="secret-row">
+        <span class="secret-lbl" id="end-opp-label">Opponent's was</span>
+        <span class="secret-val" id="end-opp-secret">????</span>
+      </div>
+    </div>
+    <button class="btn btn-dark" id="btn-home" style="max-width:360px;width:100%">
+      BACK TO HOME
+    </button>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════ SCRIPTS ════ -->
+<script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+<script>
+  const MAX = 8;
+  const socket = io();
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  let mySid        = null;
+  let gameState    = null;   // latest state_update payload
+  let currentRow   = 0;
+  let isAnimating  = false;
+  let pendingState = null;
+  let pendingOver  = null;
+  let toastTimer   = null;
+
+  // ── DOM shortcuts ──────────────────────────────────────────────────────────
+  const $ = id => document.getElementById(id);
+  const toastEl  = $('toast');
+  const gridEl   = $('grid');
+  const inputEl  = $('guess-input');
+  const guessBtn = $('guess-btn');
+  const numberInput = $('number-input');
+  const confirmNumberBtn = $('btn-confirm-number');
+
+  // ── Utilities ──────────────────────────────────────────────────────────────
+  function toast(msg, ms = 2000) {
+    clearTimeout(toastTimer);
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), ms);
+  }
+
+  function showScreen(name) {
+    document.querySelectorAll('.screen').forEach(s => {
+      s.classList.toggle('active', s.id === `s-${name}`);
+    });
+  }
+
+  function confetti() {
+    const cols = ['#ff4500','#ff8c00','#ffc700','#538d4e','#b59f3b','#4c90e8','#e040fb','#fff'];
+    for (let i = 0; i < 72; i++) {
+      const el = document.createElement('div');
+      el.className = 'cp';
+      el.style.cssText = `left:${Math.random()*100}%;
+        width:${5+Math.random()*5}px;height:${5+Math.random()*5}px;
+        background:${cols[i%cols.length]};
+        border-radius:${Math.random()>.5?'50%':'2px'};
+        animation-delay:${(Math.random()*.5).toFixed(2)}s;
+        animation-duration:${(.9+Math.random()*1).toFixed(2)}s;`;
+      document.body.appendChild(el);
+      el.addEventListener('animationend', () => el.remove());
+    }
+  }
+
+  // ── Validation ─────────────────────────────────────────────────────────────
+  function validate(s) {
+    if (s.length !== 4)         return 'Need exactly 4 digits';
+    if (s[0] === '0')           return 'Cannot start with 0';
+    if (!/^\d+$/.test(s))      return 'Digits only';
+    const d = s.split('').map(Number);
+    if (new Set(d).size !== 4) return 'No repeated digits';
+    for (let i = 0; i < 3; i++)
+      if (d[i+1] - d[i] === 1) return `${d[i]}→${d[i+1]} not allowed`;
+    return null;
+  }
+
+  // ── Grid ───────────────────────────────────────────────────────────────────
+  function buildGrid() {
+    gridEl.innerHTML = '';
+    for (let r = 0; r < MAX; r++) {
+      const row = document.createElement('div');
+      row.className = 'row';
+      for (let c = 0; c < 4; c++) {
+        const t = document.createElement('div');
+        t.className = 'tile'; t.id = `t-${r}-${c}`;
+        row.appendChild(t);
+      }
+      gridEl.appendChild(row);
+    }
+  }
+
+  function syncRow(val) {
+    if (currentRow >= MAX) return;
+    for (let c = 0; c < 4; c++) {
+      const t  = $(`t-${currentRow}-${c}`);
+      const ch = val[c] || '';
+      if (t.textContent !== ch) {
+        t.textContent = ch;
+        t.classList.toggle('has-char', !!ch);
+        if (ch) { t.classList.remove('pop'); void t.offsetWidth; t.classList.add('pop'); }
+      }
+    }
+  }
+
+  function revealRow(rowIdx, feedback, cb) {
+    const FLIP = 440, GAP = 110;
+    feedback.forEach((state, c) => {
+      const t = $(`t-${rowIdx}-${c}`);
+      setTimeout(() => {
+        t.classList.add('flip');
+        setTimeout(() => t.setAttribute('data-s', state), FLIP / 2);
+        setTimeout(() => t.classList.remove('flip'), FLIP);
+      }, c * GAP);
+    });
+    setTimeout(cb, feedback.length * GAP + FLIP + 80);
+  }
+
+  // ── Game UI ────────────────────────────────────────────────────────────────
+  function applyState(state) {
+    if (!mySid) return;
+    gameState = state;
+
+    const me  = state.players.find(p => p.sid === mySid);
+    const opp = state.players.find(p => p.sid !== mySid);
+    if (!me) return;
+
+    // My panel
+    $('me-name').textContent = me.nickname;
+    $('me-bar').style.width  = me.progress + '%';
+    $('me-pct').textContent  = me.progress + '%';
+    $('me-att').textContent  = `${me.attempts}/${state.max_attempts}`;
+    
+    // Display my secret number (only visible to me)
+    if (me.secret) {
+      $('me-secret').textContent = me.secret;
+    }
+
+    // Opponent panel
+    if (opp) {
+      $('opp-name').textContent = opp.nickname;
+      $('opp-bar').style.width  = opp.progress + '%';
+      $('opp-pct').textContent  = opp.progress + '%';
+      $('opp-att').textContent  = `${opp.attempts}/${state.max_attempts}`;
+      
+      // Display opponent's last guess
+      if (opp.last_guess) {
+        $('opp-last-guess').textContent = opp.last_guess;
+      } else {
+        $('opp-last-guess').textContent = '--';
+      }
+    }
+
+    const myTurn = state.current_turn === mySid;
+    const turnBar = $('turn-bar');
+
+    if (myTurn) {
+      turnBar.className = 'turn-bar my-turn';
+      turnBar.innerHTML = 'YOUR TURN';
+    } else {
+      const oppName = opp ? opp.nickname : 'Opponent';
+      turnBar.className = 'turn-bar opp-turn';
+      turnBar.innerHTML = `${oppName}'s turn
+        <span class="thinking">
+          <span></span><span></span><span></span>
+        </span>`;
+    }
+
+    inputEl.disabled  = !myTurn || state.ended;
+    guessBtn.disabled = !myTurn || state.ended;
+    if (myTurn && !state.ended) inputEl.focus();
+  }
+
+  function handleGameOver(data) {
+    const { winner, secrets, forfeit } = data;
+    const won  = winner === mySid;
+    const draw = winner === null;
+
+    if (won) confetti();
+
+    let title, sub;
+    if (draw)        { title = 'DRAW';      sub = 'Neither cracked the number'; }
+    else if (forfeit){ title = won ? 'YOU WIN!' : 'YOU LOSE';
+                       sub   = won ? 'Opponent disconnected' : 'Opponent disconnected — you forfeit'; }
+    else             { title = won ? 'YOU WIN!' : 'YOU LOSE';
+                       sub   = won ? 'You cracked the code first!' : 'Opponent cracked it first'; }
+
+    const banner = $('end-banner');
+    banner.className = `end-banner ${draw ? 'draw' : won ? 'win' : 'lose'}`;
+    $('end-title').textContent = title;
+    $('end-sub').textContent   = sub;
+
+    const mySecret  = secrets[mySid] || '????';
+    const oppSid    = Object.keys(secrets).find(s => s !== mySid);
+    const oppSecret = oppSid ? secrets[oppSid] : '????';
+    $('end-my-secret').textContent = mySecret;
+    $('end-opp-secret').textContent = oppSecret;
+
+    if (gameState) {
+      const opp = gameState.players.find(p => p.sid !== mySid);
+      if (opp) $('end-opp-label').textContent = `${opp.nickname}'s was`;
+    }
+
+    setTimeout(() => showScreen('end'), won ? 1600 : 400);
+  }
+
+  // ── Socket events ──────────────────────────────────────────────────────────
+  socket.on('room_created', ({ code, your_sid }) => {
+    mySid = your_sid;
+    $('lobby-code').textContent = code;
+    resetNumberDisplay();
+    showScreen('number');
+  });
+
+  socket.on('join_success', ({ code, your_sid }) => {
+    mySid = your_sid;
+    resetNumberDisplay();
+    showScreen('number');
+  });
+
+  socket.on('join_error', ({ message }) => {
+    toast(message);
+    $('home-code').classList.add('err');
+    setTimeout(() => $('home-code').classList.remove('err'), 1500);
+  });
+
+  socket.on('state_update', (state) => {
+    gameState = state;
+
+    // Home/Lobby -> Game transition
+    if (state.started && (document.getElementById('s-home').classList.contains('active') || document.getElementById('s-lobby').classList.contains('active'))) {
+      currentRow = 0;
+      showScreen('game');
+      buildGrid();
+      applyState(state);
+      return;
+    }
+
+    if (document.getElementById('s-game').classList.contains('active')) {
+      if (isAnimating) {
+        pendingState = state;
+      } else {
+        applyState(state);
+      }
+    }
+  });
+
+  socket.on('guess_feedback', (data) => {
+    const rowIdx = currentRow;
+    currentRow++;
+    inputEl.value = '';
+    syncRow('');
+    isAnimating = true;
+
+    revealRow(rowIdx, data.feedback, () => {
+      isAnimating = false;
+
+      if (pendingOver) {
+        handleGameOver(pendingOver);
+        pendingOver = null;
+        return;
+      }
+      if (pendingState) {
+        applyState(pendingState);
+        pendingState = null;
+      }
+    });
+  });
+
+  socket.on('game_over', (data) => {
+    if (isAnimating) {
+      pendingOver = data;
+    } else {
+      handleGameOver(data);
+    }
+  });
+
+  socket.on('opponent_left', () => {
+    toast('Opponent left the room');
+  });
+
+  socket.on('guess_error', ({ message }) => {
+    toast(message);
+    inputEl.classList.add('shake');
+    guessBtn.disabled = false;
+    inputEl.disabled  = false;
+    setTimeout(() => inputEl.classList.remove('shake'), 400);
+  });
+
+  socket.on('number_confirmed', ({}) => {
+    // Number confirmed, proceed to lobby or game
+    if (gameState && gameState.started) {
+      showScreen('game');
+      buildGrid();
+      applyState(gameState);
+    } else {
+      showScreen('lobby');
+    }
+  });
+
+  socket.on('number_error', ({ message }) => {
+    toast(message);
+    showErrorOnDigits();
+    confirmNumberBtn.disabled = false;
+    numberInput.disabled = false;
+  });
+
+  // ── Actions ────────────────────────────────────────────────────────────────
+  function getNickname() {
+    return $('home-nick').value.trim() || 'Player';
+  }
+
+  $('btn-create').addEventListener('click', () => {
+    socket.emit('create_room', { nickname: getNickname() });
+  });
+
+  $('btn-join').addEventListener('click', () => {
+    const code = $('home-code').value.trim().toUpperCase();
+    if (!code) { toast('Enter a room code'); return; }
+    socket.emit('join_room', { code, nickname: getNickname() });
+  });
+
+  $('home-code').addEventListener('keydown', e => {
+    if (e.key === 'Enter') $('btn-join').click();
+  });
+
+  $('home-nick').addEventListener('keydown', e => {
+    if (e.key === 'Enter') $('btn-create').click();
+  });
+
+  $('btn-copy').addEventListener('click', () => {
+    const code = $('lobby-code').textContent;
+    navigator.clipboard.writeText(code).then(() => {
+      const btn = $('btn-copy');
+      btn.textContent = 'COPIED!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'COPY'; btn.classList.remove('copied'); }, 1800);
+    });
+  });
+
+  $('btn-cancel').addEventListener('click', () => {
+    socket.emit('leave_game');
+    showScreen('home');
+  });
+
+  $('btn-home').addEventListener('click', () => {
+    socket.emit('leave_game');
+    mySid = null; gameState = null; currentRow = 0;
+    isAnimating = false; pendingState = null; pendingOver = null;
+    $('home-nick').value = ''; $('home-code').value = '';
+    showScreen('home');
+  });
+
+  
+  guessBtn.addEventListener('click', submitGuess);
+  inputEl.addEventListener('keydown', e => { if (e.key === 'Enter') submitGuess(); });
+  inputEl.addEventListener('input', () => {
+    const val = inputEl.value.replace(/\D/g, '').slice(0, 4);
+    inputEl.value = val;
+    syncRow(val);
+  });
+
+  // Number selection handlers
+  confirmNumberBtn.addEventListener('click', confirmNumber);
+  numberInput.addEventListener('keydown', e => { if (e.key === 'Enter') confirmNumber(); });
+  numberInput.addEventListener('input', () => {
+    const val = numberInput.value.replace(/\D/g, '').slice(0, 4);
+    numberInput.value = val;
+    updateNumberDisplay(val);
+  });
+
+  // Focus the hidden input when clicking on digit display
+  document.querySelector('.number-input-wrapper').addEventListener('click', () => {
+    numberInput.focus();
+  });
+
+  function updateNumberDisplay(value) {
+    const digits = value.split('');
+    for (let i = 0; i < 4; i++) {
+      const digitEl = document.getElementById(`digit-${i}`);
+      if (digits[i]) {
+        digitEl.textContent = digits[i];
+        digitEl.classList.add('filled');
+      } else {
+        digitEl.textContent = '_';
+        digitEl.classList.remove('filled');
+      }
+    }
+  }
+
+  function showErrorOnDigits() {
+    for (let i = 0; i < 4; i++) {
+      const digitEl = document.getElementById(`digit-${i}`);
+      digitEl.classList.add('error');
+      setTimeout(() => {
+        digitEl.classList.remove('error');
+      }, 400);
+    }
+  }
+
+  function resetNumberDisplay() {
+    for (let i = 0; i < 4; i++) {
+      const digitEl = document.getElementById(`digit-${i}`);
+      digitEl.textContent = '_';
+      digitEl.classList.remove('filled', 'error');
+    }
+  }
+
+  function confirmNumber() {
+    if (confirmNumberBtn.disabled) return;
+    const val = numberInput.value.replace(/\D/g, '').slice(0, 4);
+    numberInput.value = val;
+
+    const err = validate(val);
+    if (err) {
+      toast(err);
+      showErrorOnDigits();
+      return;
+    }
+
+    numberInput.disabled = true;
+    confirmNumberBtn.disabled = true;
+    socket.emit('confirm_number', { number: val });
+  }
+
+  function submitGuess() {
+    if (guessBtn.disabled) return;
+    const val = inputEl.value.replace(/\D/g, '').slice(0, 4);
+    inputEl.value = val;
+
+    const err = validate(val);
+    if (err) {
+      toast(err);
+      inputEl.classList.add('shake');
+      setTimeout(() => inputEl.classList.remove('shake'), 400);
+      return;
+    }
+
+    inputEl.disabled  = true;
+    guessBtn.disabled = true;
+    socket.emit('make_guess', { guess: val });
+  }
+</script>
+</body>
+</html>
