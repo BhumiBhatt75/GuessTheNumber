@@ -322,10 +322,16 @@
       color: #ccc; flex-shrink: 0;
     }
 
+    .pc-your-num {
+      display: flex; align-items: center; gap: 5px; margin: 2px 0;
+    }
+    .pc-num-lbl {
+      font-size: 0.58rem; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: #aaa;
+    }
     .pc-secret {
       font-family: 'Bungee', cursive; font-size: 0.9rem;
-      letter-spacing: 0.15em; color: #1a1a1b;
-      margin: 2px 0;
+      letter-spacing: 0.15em; color: #ff8c00;
     }
 
     .pc-last-guess {
@@ -568,6 +574,68 @@
     }
     @keyframes cf { to { transform: translateY(110vh) rotate(540deg); opacity: 0; } }
 
+    /* ── HOW TO PLAY ─────────────────────────────────────────────────────────── */
+    .how-to-play {
+      background: #f5f5f5; border: 1px solid #e8e8e8;
+      border-radius: 10px; padding: 12px 14px;
+      font-size: 0.75rem; color: #555;
+    }
+    .how-to-play summary {
+      font-weight: 700; font-size: 0.78rem; color: #1a1a1b;
+      cursor: pointer; display: flex; align-items: center; gap: 6px;
+      user-select: none;
+    }
+    .how-to-play summary::-webkit-details-marker { display: none; }
+    .how-to-play summary::before { content: '▶'; font-size: 0.6rem; transition: transform .2s; }
+    .how-to-play[open] summary::before { transform: rotate(90deg); }
+    .how-to-play ol {
+      padding-left: 16px; margin-top: 10px;
+      display: flex; flex-direction: column; gap: 6px; line-height: 1.45;
+    }
+    .htp-dot {
+      width: 10px; height: 10px; border-radius: 3px;
+      display: inline-block; margin-right: 3px; vertical-align: middle;
+    }
+
+    /* ── DIGIT KEYBOARD ──────────────────────────────────────────────────────── */
+    .digit-keyboard {
+      width: 100%; display: flex; flex-direction: column;
+      gap: 6px; align-items: center; margin-top: 6px;
+    }
+    .dk-row { display: flex; gap: 6px; }
+    .dk-key {
+      width: 34px; height: 46px; border-radius: 6px;
+      border: none; cursor: pointer;
+      font-weight: 700; font-size: 0.9rem; font-family: 'Inter', sans-serif;
+      background: #d3d6da; color: #1a1a1b;
+      transition: background 0.25s, color 0.25s;
+    }
+    .dk-key[data-s="correct"] { background: var(--correct); color: #fff; }
+    .dk-key[data-s="exists"]  { background: var(--exists);  color: #fff; }
+    .dk-key[data-s="none"]    { background: var(--none);    color: #fff; }
+
+    /* ── TURN TIMER ──────────────────────────────────────────────────────────── */
+    .timer-wrap {
+      width: 100%; display: none; flex-direction: column; align-items: center;
+    }
+    .timer-row {
+      display: flex; align-items: center; gap: 6px;
+      padding: 4px 16px 2px;
+    }
+    .timer-count {
+      font-family: 'Bungee', cursive; font-size: 1.25rem;
+      color: #ff8c00; min-width: 2ch; text-align: center;
+    }
+    .timer-count.urgent { color: #ef4444; animation: urgentPulse .5s ease infinite alternate; }
+    @keyframes urgentPulse { from { opacity: 1; transform: scale(1); } to { opacity: 0.55; transform: scale(1.12); } }
+    .timer-label { font-size: 0.65rem; font-weight: 600; color: #aaa; letter-spacing: 0.08em; }
+    .timer-track { width: 100%; height: 3px; background: #e8e8e8; }
+    .timer-fill  { height: 100%; width: 100%; background: #ff8c00; transition: width 1s linear, background .3s; }
+    .timer-fill.urgent { background: #ef4444; }
+
+    /* ── END SCREEN BUTTONS ──────────────────────────────────────────────────── */
+    .end-actions { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 10px; }
+
     /* ── RESPONSIVE ─────────────────────────────────────────────────────────── */
     @media (min-width: 400px) {
       :root { --tile: 56px; }
@@ -612,8 +680,20 @@
     <div class="card">
       <label class="number-label">Choose your secret number</label>
       <p class="number-hint">
-        4 digits, no leading zero, no repeated digits, no ascending consecutive (like 7-8)
+        4 digits · no leading zero · no repeated digits · no ascending consecutive (e.g. 7→8)
       </p>
+      <details class="how-to-play">
+        <summary>How to play</summary>
+        <ol>
+          <li>Both players secretly choose a 4-digit number, then the game begins.</li>
+          <li>Take turns guessing your opponent's number — you have <strong>8 attempts</strong> each.</li>
+          <li><span class="htp-dot" style="background:var(--correct)"></span><strong>Green</strong> — right digit, right position.</li>
+          <li><span class="htp-dot" style="background:var(--exists)"></span><strong>Yellow</strong> — right digit, wrong position.</li>
+          <li><span class="htp-dot" style="background:var(--none)"></span><strong>Grey</strong> — digit not in the number at all.</li>
+          <li>Use the digit tracker keypad to mark off eliminated digits.</li>
+          <li>First to guess correctly <strong>wins!</strong> If both run out of attempts, it's a draw.</li>
+        </ol>
+      </details>
       <div class="number-input-wrapper">
         <div class="number-digit" id="digit-0">_</div>
         <div class="number-digit" id="digit-1">_</div>
@@ -652,8 +732,11 @@
   <!-- Player panels -->
   <div class="players-bar">
     <div class="player-card me" id="pc-me">
-      <div class="pc-name" id="me-name">YOU</div>
-      <div class="pc-secret" id="me-secret">????</div>
+      <div class="pc-name" id="me-name">You</div>
+      <div class="pc-your-num">
+        <span class="pc-num-lbl">Your #</span>
+        <span class="pc-secret" id="me-secret">????</span>
+      </div>
       <div class="pc-bar-bg"><div class="pc-bar-fill" id="me-bar"></div></div>
       <div style="display:flex;gap:6px;align-items:center">
         <span class="pc-pct" id="me-pct">0%</span>
@@ -677,6 +760,16 @@
     YOUR TURN
   </div>
 
+  <!-- Timer -->
+  <div class="timer-wrap" id="timer-wrap">
+    <div class="timer-row">
+      <span class="timer-label">⏱</span>
+      <span class="timer-count" id="timer-count">20</span>
+      <span class="timer-label">s</span>
+    </div>
+    <div class="timer-track"><div class="timer-fill" id="timer-fill"></div></div>
+  </div>
+
   <!-- Game body -->
   <div class="game-body">
     <div class="grid" id="grid"></div>
@@ -685,6 +778,24 @@
       <input id="guess-input" type="tel" inputmode="numeric"
              maxlength="4" placeholder="Enter 4-digit number..." autocomplete="off" />
       <button id="guess-btn">GUESS</button>
+    </div>
+
+    <!-- Wordle-style digit tracker -->
+    <div class="digit-keyboard" id="digit-keyboard">
+      <div class="dk-row">
+        <button class="dk-key" data-digit="1">1</button>
+        <button class="dk-key" data-digit="2">2</button>
+        <button class="dk-key" data-digit="3">3</button>
+        <button class="dk-key" data-digit="4">4</button>
+        <button class="dk-key" data-digit="5">5</button>
+      </div>
+      <div class="dk-row">
+        <button class="dk-key" data-digit="6">6</button>
+        <button class="dk-key" data-digit="7">7</button>
+        <button class="dk-key" data-digit="8">8</button>
+        <button class="dk-key" data-digit="9">9</button>
+        <button class="dk-key" data-digit="0">0</button>
+      </div>
     </div>
   </div>
 </section>
@@ -711,9 +822,10 @@
         <span class="secret-val" id="end-opp-secret">????</span>
       </div>
     </div>
-    <button class="btn btn-dark" id="btn-home" style="max-width:360px;width:100%">
-      BACK TO HOME
-    </button>
+    <div class="end-actions">
+      <button class="btn btn-dark" id="btn-play-again">PLAY AGAIN</button>
+      <button class="btn btn-light" id="btn-home">BACK TO HOME</button>
+    </div>
   </div>
 </section>
 
@@ -731,6 +843,103 @@
   let pendingState = null;
   let pendingOver  = null;
   let toastTimer   = null;
+
+  // ── Sound Effects (Web Audio API) ──────────────────────────────────────────
+  const SFX = (() => {
+    let ctx = null;
+    function getCtx() {
+      if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+      return ctx;
+    }
+    function tone(freq, type, dur, vol = 0.25, delay = 0) {
+      try {
+        const c = getCtx();
+        const o = c.createOscillator();
+        const g = c.createGain();
+        o.connect(g); g.connect(c.destination);
+        o.type = type; o.frequency.value = freq;
+        const t = c.currentTime + delay;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(vol, t + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+        o.start(t); o.stop(t + dur + 0.05);
+      } catch(e) {}
+    }
+    return {
+      flip:    ()  => tone(380, 'sine', 0.07, 0.18),
+      correct: ()  => { tone(523, 'sine', 0.12, 0.22); tone(659, 'sine', 0.15, 0.22, 0.1); },
+      error:   ()  => tone(160, 'square', 0.14, 0.2),
+      tick:    ()  => tone(900, 'sine', 0.04, 0.12),
+      win:     ()  => { [523,659,784,1047].forEach((f,i) => tone(f,'sine',0.22,0.3,i*0.13)); },
+      lose:    ()  => { tone(330,'sawtooth',0.18,0.2); tone(220,'sawtooth',0.28,0.18,0.15); },
+    };
+  })();
+
+  // ── Digit Tracker ──────────────────────────────────────────────────────────
+  const digitStates = {};  // '0'-'9' -> 'correct'|'exists'|'none'|undefined
+  const statePriority = { correct: 3, exists: 2, none: 1 };
+
+  function resetDigitTracker() {
+    for (let d = 0; d <= 9; d++) delete digitStates[String(d)];
+    document.querySelectorAll('.dk-key').forEach(k => k.removeAttribute('data-s'));
+  }
+
+  function updateDigitTracker(guess, feedback) {
+    for (let i = 0; i < 4; i++) {
+      const d = guess[i], s = feedback[i], cur = digitStates[d];
+      if (!cur || (statePriority[s] || 0) > (statePriority[cur] || 0)) digitStates[d] = s;
+    }
+    document.querySelectorAll('.dk-key').forEach(k => {
+      const s = digitStates[k.dataset.digit];
+      if (s) k.setAttribute('data-s', s); else k.removeAttribute('data-s');
+    });
+  }
+
+  // ── Turn Timer ────────────────────────────────────────────────────────────
+  const TIMER_DURATION = 20;
+  let timerInterval = null;
+  let timerSeconds  = 0;
+
+  function startTimer() {
+    stopTimer();
+    timerSeconds = TIMER_DURATION;
+    const wrap  = $('timer-wrap');
+    const count = $('timer-count');
+    const fill  = $('timer-fill');
+    wrap.style.display = 'flex';
+    count.textContent = timerSeconds;
+    count.className = 'timer-count';
+    fill.className = 'timer-fill';
+    fill.style.transition = 'none';
+    fill.style.width = '100%';
+    // start the CSS transition on next frame
+    requestAnimationFrame(() => {
+      fill.style.transition = `width ${TIMER_DURATION}s linear`;
+      fill.style.width = '0%';
+    });
+    timerInterval = setInterval(() => {
+      timerSeconds--;
+      count.textContent = timerSeconds;
+      if (timerSeconds <= 5) {
+        count.className = 'timer-count urgent';
+        fill.className  = 'timer-fill urgent';
+        SFX.tick();
+      }
+      if (timerSeconds <= 0) {
+        stopTimer();
+        inputEl.disabled  = true;
+        guessBtn.disabled = true;
+        socket.emit('skip_turn', {});
+      }
+    }, 1000);
+  }
+
+  function stopTimer() {
+    clearInterval(timerInterval);
+    timerInterval = null;
+    const wrap = $('timer-wrap');
+    if (wrap) wrap.style.display = 'none';
+  }
 
   // ── DOM shortcuts ──────────────────────────────────────────────────────────
   const $ = id => document.getElementById(id);
@@ -816,6 +1025,7 @@
     feedback.forEach((state, c) => {
       const t = $(`t-${rowIdx}-${c}`);
       setTimeout(() => {
+        SFX.flip();
         t.classList.add('flip');
         setTimeout(() => t.setAttribute('data-s', state), FLIP / 2);
         setTimeout(() => t.classList.remove('flip'), FLIP);
@@ -834,7 +1044,7 @@
     if (!me) return;
 
     // My panel
-    $('me-name').textContent = me.nickname;
+    $('me-name').textContent = 'You';
     $('me-bar').style.width  = me.progress + '%';
     $('me-pct').textContent  = me.progress + '%';
     $('me-att').textContent  = `${me.attempts}/${state.max_attempts}`;
@@ -876,7 +1086,12 @@
 
     inputEl.disabled  = !myTurn || state.ended;
     guessBtn.disabled = !myTurn || state.ended;
-    if (myTurn && !state.ended) inputEl.focus();
+    if (myTurn && !state.ended) {
+      inputEl.focus();
+      startTimer();
+    } else {
+      stopTimer();
+    }
   }
 
   function handleGameOver(data) {
@@ -884,13 +1099,15 @@
     const won  = winner === mySid;
     const draw = winner === null;
 
-    if (won) confetti();
+    stopTimer();
+    if (won) { confetti(); SFX.win(); }
+    else if (!draw) { SFX.lose(); }
 
     let title, sub;
-    if (draw)        { title = 'DRAW';      sub = 'Neither cracked the number'; }
-    else if (forfeit){ title = won ? 'YOU WIN!' : 'YOU LOSE';
+    if (draw)        { title = 'DRAW';       sub = 'Neither cracked the number'; }
+    else if (forfeit){ title = won ? 'YOU WIN!' : 'YOU LOSE!';
                        sub   = won ? 'Opponent disconnected' : 'Opponent disconnected — you forfeit'; }
-    else             { title = won ? 'YOU WIN!' : 'YOU LOSE';
+    else             { title = won ? 'YOU WIN!' : 'YOU LOSE!';
                        sub   = won ? 'You cracked the code first!' : 'Opponent cracked it first'; }
 
     const banner = $('end-banner');
@@ -917,12 +1134,14 @@
     mySid = your_sid;
     $('lobby-code').textContent = code;
     resetNumberDisplay();
+    resetDigitTracker();
     showScreen('number');
   });
 
   socket.on('join_success', ({ code, your_sid }) => {
     mySid = your_sid;
     resetNumberDisplay();
+    resetDigitTracker();
     showScreen('number');
   });
 
@@ -938,6 +1157,7 @@
     // Home/Lobby -> Game transition
     if (state.started && (document.getElementById('s-home').classList.contains('active') || document.getElementById('s-lobby').classList.contains('active'))) {
       currentRow = 0;
+      resetDigitTracker();
       showScreen('game');
       buildGrid();
       applyState(state);
@@ -959,6 +1179,10 @@
     inputEl.value = '';
     syncRow('');
     isAnimating = true;
+    stopTimer();
+
+    updateDigitTracker(data.guess, data.feedback);
+    if (data.correct === 4) SFX.correct();
 
     revealRow(rowIdx, data.feedback, () => {
       isAnimating = false;
@@ -989,6 +1213,7 @@
 
   socket.on('guess_error', ({ message }) => {
     toast(message);
+    SFX.error();
     inputEl.classList.add('shake');
     guessBtn.disabled = false;
     inputEl.disabled  = false;
@@ -998,6 +1223,8 @@
   socket.on('number_confirmed', ({}) => {
     // Number confirmed, proceed to lobby or game
     if (gameState && gameState.started) {
+      currentRow = 0;
+      resetDigitTracker();
       showScreen('game');
       buildGrid();
       applyState(gameState);
@@ -1055,6 +1282,7 @@
     socket.emit('leave_game');
     mySid = null; gameState = null; currentRow = 0;
     isAnimating = false; pendingState = null; pendingOver = null;
+    stopTimer(); resetDigitTracker();
     $('home-nick').value = ''; $('home-code').value = '';
     showScreen('home');
   });
@@ -1066,6 +1294,26 @@
     const val = inputEl.value.replace(/\D/g, '').slice(0, 4);
     inputEl.value = val;
     syncRow(val);
+  });
+
+  // Digit keyboard — type into guess input on click
+  document.querySelectorAll('.dk-key').forEach(key => {
+    key.addEventListener('click', () => {
+      if (inputEl.disabled) return;
+      const val = (inputEl.value + key.dataset.digit).replace(/\D/g, '').slice(0, 4);
+      inputEl.value = val;
+      syncRow(val);
+      inputEl.focus();
+    });
+  });
+
+  // Play Again — go home keeping nothing
+  $('btn-play-again').addEventListener('click', () => {
+    socket.emit('leave_game');
+    mySid = null; gameState = null; currentRow = 0;
+    isAnimating = false; pendingState = null; pendingOver = null;
+    stopTimer(); resetDigitTracker();
+    showScreen('home');
   });
 
   // Number selection handlers
@@ -1139,11 +1387,13 @@
     const err = validate(val);
     if (err) {
       toast(err);
+      SFX.error();
       inputEl.classList.add('shake');
       setTimeout(() => inputEl.classList.remove('shake'), 400);
       return;
     }
 
+    stopTimer();
     inputEl.disabled  = true;
     guessBtn.disabled = true;
     socket.emit('make_guess', { guess: val });

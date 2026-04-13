@@ -91,17 +91,7 @@ def on_guess(data):
         emit("guess_error", {"message": msg}); return
 
     player = room.players[request.sid]
-    
-    # Find opponent's secret number (that's what the player should be guessing)
-    opponent_sids = [sid for sid in room.players.keys() if sid != request.sid]
-    if not opponent_sids:
-        emit("guess_error", {"message": "No opponent found"}); return
-    
-    opponent_sid = opponent_sids[0]
-    secret = room.players[opponent_sid]["secret"]
-    
-    if not secret:
-        emit("guess_error", {"message": "Opponent hasn't chosen a number yet"}); return
+    secret = player["secret"]
 
     # Per-digit feedback
     feedback = []
@@ -178,6 +168,17 @@ def on_confirm_number(data):
     if len(room.players) == 2 and all(p.get("secret") for p in room.players.values()):
         room.start()
         _state(room)
+
+
+@socketio.on("skip_turn")
+def on_skip_turn(_data=None):
+    room = find_room_by_sid(request.sid)
+    if not room or not room.started or room.ended:
+        return
+    if room.current_turn != request.sid:
+        return
+    room.advance_turn()
+    _state(room)
 
 
 @socketio.on("leave_game")
