@@ -1,1 +1,1 @@
-web: gunicorn --worker-class threading -w 1 app:app
+web: gunicorn -w 1 --threads 100 --timeout 120 app:app
