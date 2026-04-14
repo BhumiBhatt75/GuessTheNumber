@@ -1,6 +1,9 @@
+import eventlet
+eventlet.monkey_patch()
+
 import os
 
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, session
 from flask_socketio import SocketIO, emit, join_room as sio_join
 
 from game import is_valid_number
@@ -10,7 +13,9 @@ from rooms import (
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "gmiyc-dev-key-change-in-prod")
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", "gmiyc-dev-key-change-in-prod")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet", manage_session=False)
 
 
 # ── HTTP ───────────────────────────────────────────────────────────────────────
