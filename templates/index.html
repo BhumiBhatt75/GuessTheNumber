@@ -834,13 +834,24 @@
 <script>
   const MAX = 8;
   const socket = io({
-    transports: ['polling', 'websocket'],
+    transports: ['polling'],
     forceNew: true,
     reconnection: true,
-    reconnectionDelay: 1000,
-    reconnectionAttempts: 5,
-    maxReconnectionAttempts: 5
+    reconnectionDelay: 2000,
+    reconnectionAttempts: 10,
+    maxReconnectionAttempts: 10
   });
+
+  // Disable home buttons until socket is connected
+  function setHomeButtons(enabled) {
+    $('btn-create').disabled = !enabled;
+    $('btn-join').disabled   = !enabled;
+    $('btn-create').textContent = enabled ? 'CREATE ROOM' : 'CONNECTING…';
+  }
+  setHomeButtons(false);
+
+  socket.on('connect', () => setHomeButtons(true));
+  socket.on('disconnect', () => setHomeButtons(false));
 
   // ── State ──────────────────────────────────────────────────────────────────
   let mySid        = null;
@@ -1153,6 +1164,7 @@
   });
 
   socket.on('join_error', ({ message }) => {
+    setHomeButtons(true);
     toast(message);
     $('home-code').classList.add('err');
     setTimeout(() => $('home-code').classList.remove('err'), 1500);
@@ -1253,6 +1265,8 @@
   }
 
   $('btn-create').addEventListener('click', () => {
+    if (!socket.connected) return;
+    setHomeButtons(false);
     socket.emit('create_room', { nickname: getNickname() });
   });
 
