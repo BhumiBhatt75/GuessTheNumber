@@ -835,7 +835,12 @@
   const MAX = 8;
   const socket = io({
     transports: ['websocket', 'polling'],
-    upgrade: false
+    upgrade: false,
+    forceNew: true,
+    reconnection: true,
+    reconnectionDelay: 1000,
+    reconnectionAttempts: 5,
+    maxReconnectionAttempts: 5
   });
 
   // ── State ──────────────────────────────────────────────────────────────────
