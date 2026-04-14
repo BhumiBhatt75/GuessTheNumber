@@ -834,8 +834,7 @@
 <script>
   const MAX = 8;
   const socket = io({
-    transports: ['websocket', 'polling'],
-    upgrade: false,
+    transports: ['polling', 'websocket'],
     forceNew: true,
     reconnection: true,
     reconnectionDelay: 1000,
